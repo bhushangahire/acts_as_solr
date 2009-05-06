@@ -31,6 +31,10 @@ module ActsAsSolr #:nodoc:
     # 
     # facets:: This option argument accepts the following arguments:
     #          fields:: The fields to be included in the faceted search (Solr's facet.field)
+    #                   Must be an array of either Symbols or Hashes with the field as keys.
+    #                   With the Hash form, additional options can be provided for every field.
+    #                   Possible options are :sort, :limit, :offset, :prefix, :mincount and
+    #                   :missing. They work the same as the global options below.
     #          query:: The queries to be included in the faceted search (Solr's facet.query)
     #          zeros:: Display facets with count of zero. (true|false)
     #          sort:: Sorts the faceted resuls by highest to lowest count. (true|false)
@@ -39,6 +43,8 @@ module ActsAsSolr #:nodoc:
     #          mincount:: Replacement for zeros (it has been deprecated in Solr). Specifies the
     #                     minimum count necessary for a facet field to be returned. (Solr's
     #                     facet.mincount) Overrides :zeros if it is specified. Default is 0.
+    #          limit:: Limit the results returned for the facets
+    #          offset:: Offset where to start returning facets, most useful together with :limit
     #
     #          dates:: Run date faceted queries using the following arguments:
     #            fields:: The fields to be included in the faceted date search (Solr's facet.date).
@@ -74,7 +80,10 @@ module ActsAsSolr #:nodoc:
     #                                                            "price:[500 TO *]"],
     #                                                 :fields => [:category, :manufacturer],
     #                                                 :browse => ["category:Memory","manufacturer:Someone"]}
-    # 
+    #
+    # Example using per-field options:
+    #
+    #   Electronic.find_by_solr "memory", :facets => [{:fields => {:category => {:limit => 3, :mincount => 2}}}]
     #
     # Examples of date faceting:
     #
