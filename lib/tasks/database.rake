@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../solr_fixtures'
+require File.dirname(__FILE__) + '/../acts_as_solr/solr_fixtures'
 
 namespace :db do
   namespace :fixtures do

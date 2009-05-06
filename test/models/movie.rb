@@ -7,7 +7,7 @@ class Movie < ActiveRecord::Base
   acts_as_solr :additional_fields => [:current_time, {:time_on_xml => :date}]
   
   def current_time
-    Time.now.to_s
+    Time.now.strftime('%b %d %Y')
   end
   
   def time_on_xml

@@ -24,16 +24,19 @@ require 'net/http'
 require 'yaml'
 
 require File.dirname(__FILE__) + '/solr'
-require File.dirname(__FILE__) + '/acts_methods'
-require File.dirname(__FILE__) + '/class_methods'
-require File.dirname(__FILE__) + '/instance_methods'
-require File.dirname(__FILE__) + '/common_methods'
-require File.dirname(__FILE__) + '/deprecation'
-require File.dirname(__FILE__) + '/search_results'
-require File.dirname(__FILE__) + '/lazy_document'
+require File.dirname(__FILE__) + '/acts_as_solr/acts_methods'
+require File.dirname(__FILE__) + '/acts_as_solr/class_methods'
+require File.dirname(__FILE__) + '/acts_as_solr/instance_methods'
+require File.dirname(__FILE__) + '/acts_as_solr/common_methods'
+require File.dirname(__FILE__) + '/acts_as_solr/deprecation'
+require File.dirname(__FILE__) + '/acts_as_solr/search_results'
+require File.dirname(__FILE__) + '/acts_as_solr/lazy_document'
+require File.dirname(__FILE__) + '/acts_as_solr/index'
+require File.dirname(__FILE__) + '/acts_as_solr/instance'
+
 module ActsAsSolr
   
-  class Post    
+  class Post
     def self.execute(request)
       begin
         if File.exists?(RAILS_ROOT+'/config/solr.yml')

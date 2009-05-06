@@ -1,5 +1,5 @@
 require 'test_helper'
-require 'common_methods'
+require 'acts_as_solr/common_methods'
 
 class CommonMethodsTest < Test::Unit::TestCase
   include ActsAsSolr::CommonMethods

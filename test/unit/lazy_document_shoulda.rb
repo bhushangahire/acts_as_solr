@@ -1,5 +1,5 @@
 require 'test_helper'
-require 'lazy_document'
+require 'acts_as_solr/lazy_document'
 
 class UserModel; end
 

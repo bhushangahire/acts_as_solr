@@ -1,5 +1,5 @@
 require File.dirname(__FILE__) + '/test_helper'
-require 'instance_methods'
+require 'acts_as_solr/instance_methods'
 require 'logger'
 module Solr; end
 require 'solr/xml'

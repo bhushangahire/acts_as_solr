@@ -1,63 +1,39 @@
-module ActsAsSolr #:nodoc:
-  
-  module InstanceMethods
+require File.dirname(__FILE__) + '/common_methods'
 
-    # Solr id is <class.name>:<id> to be unique across all models
-    def solr_id
-      "#{self.class.name}:#{record_id(self)}"
+module ActsAsSolr
+  class Instance
+    include CommonMethods
+    
+    attr_reader :object
+
+    def initialize(object)
+      @object = object
     end
-
-    # saves to the Solr index
-    def solr_save
-      return true if indexing_disabled?
-      if evaluate_condition(:if, self) 
-        logger.debug "solr_save: #{self.class.name} : #{record_id(self)}"
-        solr_add to_solr_doc
-        solr_commit if configuration[:auto_commit]
-        true
-      else
-        solr_destroy
-      end
-    end
-
-    def indexing_disabled?
-      evaluate_condition(:offline, self) || !configuration[:if]
-    end
-
-    # remove from index
-    def solr_destroy
-      return true if indexing_disabled?
-      logger.debug "solr_destroy: #{self.class.name} : #{record_id(self)}"
-      solr_delete solr_id
-      solr_commit if configuration[:auto_commit]
-      true
-    end
-
-    # convert instance to Solr document
+    
     def to_solr_doc
-      logger.debug "to_solr_doc: creating doc for class: #{self.class.name}, id: #{record_id(self)}"
+      logger.debug "to_solr_doc: creating doc for class: #{object.class.name}, id: #{record_id(object)}"
       doc = Solr::Document.new
-      doc.boost = validate_boost(configuration[:boost]) if configuration[:boost]
+      doc.boost = validate_boost(solr_configuration[:boost]) if solr_configuration[:boost]
       
       doc << {:id => solr_id,
-              solr_configuration[:type_field] => self.class.name,
-              solr_configuration[:primary_key_field] => record_id(self).to_s}
+              solr_configuration[:type_field] => object.class.name,
+              solr_configuration[:primary_key_field] => record_id(object).to_s}
 
       # iterate through the fields and add them to the document,
-      configuration[:solr_fields].each do |field_name, options|
+      solr_configuration[:solr_fields].each do |field_name, options|
         #field_type = configuration[:facets] && configuration[:facets].include?(field) ? :facet : :text
         
         field_boost = options[:boost] || solr_configuration[:default_boost]
         field_type = get_solr_field_type(options[:type])
         solr_name = options[:as] || field_name
         
-        value = self.send("#{field_name}_for_solr")
+        value = object.send("#{field_name}_for_solr")
         value = set_value_if_nil(field_type) if value.to_s == ""
         
         # add the field to the document, but only if it's not the id field
         # or the type field (from single table inheritance), since these
         # fields have already been added above.
-        if field_name.to_s != self.class.primary_key and field_name.to_s != "type"
+        if field_name.to_s != object.class.primary_key and field_name.to_s != "type"
           suffix = get_solr_field_type(field_type)
           # This next line ensures that e.g. nil dates are excluded from the 
           # document, since they choke Solr. Also ignores e.g. empty strings, 
@@ -78,18 +54,51 @@ module ActsAsSolr #:nodoc:
       doc
     end
     
+    def indexing_disabled?
+      evaluate_condition(:offline, object) || !solr_configuration[:if]
+    end
+
+    def save
+      return true if indexing_disabled?
+      if evaluate_condition(:if, object) 
+        logger.debug "solr_save: #{object.class.name} : #{record_id(object)}"
+        solr_add to_solr_doc
+        solr_commit if solr_configuration[:auto_commit]
+        true
+      else
+        solr_destroy
+      end
+    end
+    
+    def destroy
+      return true if indexing_disabled?
+      logger.debug "solr_destroy: #{object.class.name} : #{record_id(object)}"
+      solr_delete solr_id
+      solr_commit if solr_configuration[:auto_commit]
+      true
+    end
+    
+    def method_missing(name, *args)
+      if object.respond_to?(name)
+        object.send(name, *args)
+      else
+        super
+      end
+    end
+    
     private
+    
     def add_includes(doc)
-      if configuration[:solr_includes].respond_to?(:each)
-        configuration[:solr_includes].each do |association, options|
+      if solr_configuration[:solr_includes].respond_to?(:each)
+        solr_configuration[:solr_includes].each do |association, options|
           data = options[:multivalued] ? [] : ""
           field_name = options[:as] || association.to_s.singularize
           field_type = get_solr_field_type(options[:type])
           field_boost = options[:boost] || solr_configuration[:default_boost]
           suffix = get_solr_field_type(field_type)
-          case self.class.reflect_on_association(association).macro
+          case object.class.reflect_on_association(association).macro
           when :has_many, :has_and_belongs_to_many
-            records = self.send(association).to_a
+            records = object.send(association).to_a
             unless records.empty?
               records.each {|r| data << include_value(r, options)}
               [data].flatten.each do |value|
@@ -99,7 +108,7 @@ module ActsAsSolr #:nodoc:
               end
             end
           when :has_one, :belongs_to
-            record = self.send(association)
+            record = object.send(association)
             unless record.nil?
               doc["#{field_name}_#{suffix}"] = include_value(record, options)
             end
@@ -124,10 +133,10 @@ module ActsAsSolr #:nodoc:
         return solr_configuration[:default_boost] if boost < 0
         boost
       when Proc
-        boost.call(self)
+        boost.call(object)
       when Symbol
-        if self.respond_to?(boost)
-          self.send(boost)
+        if object.respond_to?(boost)
+          object.send(boost)
         end
       end
       
@@ -139,12 +148,12 @@ module ActsAsSolr #:nodoc:
     end
     
     def evaluate_condition(which_condition, field)
-      condition = configuration[which_condition]
+      condition = solr_configuration[which_condition]
       case condition
         when Symbol
           field.send(condition)
         when String
-          eval(condition, binding)
+          eval(condition, object.send(:binding))
         when FalseClass, NilClass
           false
         when TrueClass

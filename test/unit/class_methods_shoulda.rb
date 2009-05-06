@@ -1,6 +1,6 @@
 require File.dirname(__FILE__) + '/test_helper'
-require 'class_methods'
-require 'search_results'
+require 'acts_as_solr/class_methods'
+require 'acts_as_solr/search_results'
 require 'active_support'
 
 class User

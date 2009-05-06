@@ -1,4 +1,4 @@
-require 'instance_methods'
+require 'acts_as_solr/instance_methods'
 
 class SolrInstance
   include ActsAsSolr::InstanceMethods

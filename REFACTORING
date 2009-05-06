@@ -1,0 +1,8 @@
+Goals: Make the execution path more followable, reduce the amount of methods spread throughout the activerecord models, separate the concerns of setting up the Solr stuff for a class and querying Solr.
+
+Thoughts:
+- Introduce a wrapper class that handles querying and in general communication with Solr (ActsAsSolr::Query)
+  - Wraps the communication with solr, parsing the query and the parameters
+- Introduce a configuration class that handles configuration when acts_as_solr is called (ActsAsSolr::Configuration)
+  - Sets up the initial configuration for a class, putting it into a solr_configuration cattr_accessor
+  - 

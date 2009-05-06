@@ -26,7 +26,7 @@ class ActsAsSolrTest < Test::Unit::TestCase
   end
 
   def test_type_determined_from_database_if_not_explicitly_set
-    assert Post.configuration[:solr_fields][:posted_at][:type] == :date
+    assert Post.solr_configuration[:solr_fields][:posted_at][:type] == :date
   end
   
   def test_search_includes_subclasses
@@ -92,7 +92,7 @@ class ActsAsSolrTest < Test::Unit::TestCase
   # The method current_time above gets indexed as being part of the
   # Movie model and it's available for search as well
   def test_find_with_dynamic_fields
-    date = Time.now.strftime('%b %d %Y')
+    date = "'#{Time.now.strftime('%b %d %Y')}'"
     ["dynamite AND #{date}", "description:goofy AND #{date}", "goofy napoleon #{date}", 
       "goofiness #{date}"].each do |term|
       records = Movie.find_by_solr term 
@@ -312,11 +312,9 @@ class ActsAsSolrTest < Test::Unit::TestCase
   def test_find_by_solr_with_score
     books = Book.find_by_solr 'ruby^10 OR splinter', :scores => true
     assert_equal 2, books.total
-    assert_equal 0.41763234, books.max_score
+    assert_equal books.records.first.solr_score, books.max_score
     
     books.records.each { |book| assert_not_nil book.solr_score }
-    assert_equal 0.41763234, books.docs.first.solr_score
-    assert_equal 0.14354616, books.docs.last.solr_score
   end
   
   # Making sure nothing breaks when html entities are inside

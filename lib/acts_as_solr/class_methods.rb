@@ -1,12 +1,7 @@
-require File.dirname(__FILE__) + '/common_methods'
-require File.dirname(__FILE__) + '/parser_methods'
+require File.dirname(__FILE__) + '/index'
 
 module ActsAsSolr #:nodoc:
-
   module ClassMethods
-    include CommonMethods
-    include ParserMethods
-    
     # Finds instances of a model. Terms are ANDed by default, can be overwritten 
     # by using OR between terms
     # 
@@ -112,8 +107,7 @@ module ActsAsSolr #:nodoc:
     #        types and ids.
     #
     def find_by_solr(query, options={})
-      data = parse_query(query, options)
-      return parse_results(data, options) if data
+      solr_index.find_by_solr(query, options)
     end
     
     # Finds instances of a model and returns an array with the ids:
@@ -121,8 +115,7 @@ module ActsAsSolr #:nodoc:
     # The options accepted are the same as find_by_solr
     # 
     def find_id_by_solr(query, options={})
-      data = parse_query(query, options)
-      return parse_results(data, {:format => :ids}) if data
+      solr_index.find_id_by_solr(query, options)
     end
     
     # This method can be used to execute a search across multiple models:
@@ -148,46 +141,14 @@ module ActsAsSolr #:nodoc:
     #            => 0.12321548
     # 
     def multi_solr_search(query, options = {})
-      models = multi_model_suffix(options)
-      options.update(:results_format => :objects) unless options[:results_format]
-      data = parse_query(query, options, models)
-      
-      if data.nil? or data.total_hits == 0
-        return SearchResults.new(:docs => [], :total => 0)
-      end
-
-      result = find_multi_search_objects(data, options)
-      if options[:scores] and options[:results_format] == :objects
-        add_scores(result, data) 
-      end
-      SearchResults.new :docs => result, :total => data.total_hits
+      solr_index.multi_solr_search(query, options)
     end
 
-    def find_multi_search_objects(data, options)
-      result = []
-      if options[:results_format] == :objects
-        data.hits.each do |doc| 
-          k = doc.fetch('id').first.to_s.split(':')
-          result << k[0].constantize.find_by_id(k[1])
-        end
-      elsif options[:results_format] == :ids
-        data.hits.each{|doc| result << {"id" => doc.values.pop.to_s}}
-      end
-      result
-    end
-    
-    def multi_model_suffix(options)
-      models = "AND (#{solr_configuration[:type_field]}:#{self.name}"
-      models << " OR " + options[:models].collect {|m| "#{solr_configuration[:type_field]}:" + m.to_s}.join(" OR ") if options[:models].is_a?(Array)
-      models << ")"
-    end
-    
     # returns the total number of documents found in the query specified:
     #  Book.count_by_solr 'rails' => 3
     # 
     def count_by_solr(query, options = {})        
-      data = parse_query(query, options)
-      data.total_hits
+      solr_index.count_by_solr(query, options)
     end
             
     # It's used to rebuild the Solr index for a specific model. 
@@ -202,37 +163,13 @@ module ActsAsSolr #:nodoc:
     # This can be very useful for things such as updating based on conditions or
     # using eager loading for indexed associations.
     def rebuild_solr_index(batch_size=0, &finder)
-      finder ||= lambda { |ar, options| ar.find(:all, options.merge({:order => self.primary_key})) }
-      start_time = Time.now
-
-      if batch_size > 0
-        items_processed = 0
-        limit = batch_size
-        offset = 0
-        begin
-          iteration_start = Time.now
-          items = finder.call(self, {:limit => limit, :offset => offset})
-          add_batch = items.collect { |content| content.to_solr_doc }
+      solr_index.rebuild_solr_index(batch_size, &finder)
+    end
     
-          if items.size > 0
-            solr_add add_batch
-            solr_commit
-          end
+    protected
     
-          items_processed += items.size
-          last_id = items.last.id if items.last
-          time_so_far = Time.now - start_time
-          iteration_time = Time.now - iteration_start         
-          logger.info "#{Process.pid}: #{items_processed} items for #{self.name} have been batch added to index in #{'%.3f' % time_so_far}s at #{'%.3f' % (items_processed / time_so_far)} items/sec (#{'%.3f' % (items.size / iteration_time)} items/sec for the last batch). Last id: #{last_id}"
-          offset += items.size
-        end while items.nil? || items.size > 0
-      else
-        items = finder.call(self, {})
-        items.each { |content| content.solr_save }
-        items_processed = items.size
-      end
-      solr_optimize
-      logger.info items_processed > 0 ? "Index for #{self.name} has been rebuilt" : "Nothing to index for #{self.name}"
+    def solr_index
+      ActsAsSolr::Index.new(self)
     end
   end
   
