@@ -255,7 +255,7 @@
     <!-- default values for query parameters -->
      <lst name="defaults">
        <str name="echoParams">explicit</str>
-	   <str name="json.nl">map</str>
+	   <str name="json.nl">flat</str>
        <!-- 
        <int name="rows">10</int>
        <str name="fl">*</str>
