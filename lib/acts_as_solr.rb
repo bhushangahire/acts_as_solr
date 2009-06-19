@@ -51,15 +51,14 @@ module ActsAsSolr
       end
     end
 
-    def self.execute(request)
-      begin
-        connection = Solr::Connection.new(url)
-        return connection.send(request)
-      rescue
-        raise "Couldn't connect to the Solr server at #{url}. #{$!}"
-        false
-      end
+    def self.connection
+      @@connection ||= Solr::Connection.new(url)
     end
+
+    def self.execute(request)
+      connection.send(request)
+    end
+
   end
 
 end
