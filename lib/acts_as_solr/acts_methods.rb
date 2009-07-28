@@ -166,7 +166,15 @@ module ActsAsSolr #:nodoc:
       
       cattr_accessor :solr_configuration
       
-      self.solr_configuration = Configuration.new(self, options.merge(solr_options))
+      begin
+        self.solr_configuration = Configuration.new(self, options.merge(solr_options))
+      rescue ActiveRecord::StatementInvalid => e
+        if e.message =~ /Table .* doesn't exist/
+          $stderr.puts "** Skipping acts_as_solr initialization, as the table is not present"
+        else
+          raise
+        end
+      end
     end
   end
 end
