@@ -55,7 +55,7 @@ module ActsAsSolr
     end
     
     def indexing_disabled?
-      evaluate_condition(:offline, object) || !solr_configuration[:if]
+      evaluate_condition(:offline, object) || !evaluate_condition(:if, object)
     end
 
     def save
@@ -63,7 +63,7 @@ module ActsAsSolr
       if evaluate_condition(:if, object) 
         logger.debug "solr_save: #{object.class.name} : #{record_id(object)}"
         solr_add to_solr_doc
-        solr_commit if solr_configuration[:auto_commit]
+        solr_commit if evaluate_condition(:auto_commit, object)
         true
       else
         solr_destroy
@@ -74,7 +74,7 @@ module ActsAsSolr
       return true if indexing_disabled?
       logger.debug "solr_destroy: #{object.class.name} : #{record_id(object)}"
       solr_delete solr_id
-      solr_commit if solr_configuration[:auto_commit]
+      solr_commit if evaluate_condition(:auto_commit, object)
       true
     end
     

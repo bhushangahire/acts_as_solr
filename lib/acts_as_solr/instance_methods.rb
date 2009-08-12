@@ -27,6 +27,10 @@ module ActsAsSolr #:nodoc:
     def solr_commit
       solr_index.solr_commit
     end
+
+    def indexing_disabled?
+      solr_index.indexing_disabled?
+    end
     
     private
     
