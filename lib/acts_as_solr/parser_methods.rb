@@ -82,7 +82,12 @@ module ActsAsSolr #:nodoc:
         conditions = [ "#{self.table_name}.#{primary_key} in (?)", ids ]
         find_options = {:conditions => conditions}
         find_options[:include] = options[:include] if options[:include]
-        result = reorder(self.find(:all, find_options), ids)
+        if self.connection.adapter_name =~ /mysql/i
+          find_options[:order] = "FIELD(#{self.table_name}.#{primary_key}, #{ids.join(',')})"
+          result = self.find(:all, find_options)
+        else
+          result = reorder(self.find(:all, find_options), ids)
+        end
       else
         ids
       end

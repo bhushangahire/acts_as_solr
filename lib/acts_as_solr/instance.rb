@@ -55,7 +55,7 @@ module ActsAsSolr
     end
     
     def indexing_disabled?
-      evaluate_condition(:offline, object) || !evaluate_condition(:if, object)
+      evaluate_condition(:offline, object)
     end
 
     def save
